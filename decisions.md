@@ -1416,3 +1416,49 @@ senza inoltro" non è del tutto esatto. La voce di conntrack del tunnel sul rout
 era nata da un pacchetto **in ingresso** da CASA sulla 51821: un inoltro sul
 modem esiste o esisteva. È la voce aperta dall'agosto "chiarire l'inoltro UDP
 51821 sul router del provider".
+
+## 2026-11-15 — Accesso da PGB verso CASA: solo lettura, per scelta
+
+**Sessione presidiata. Decisione dell'utente**, presa dopo aver visto il rischio.
+
+### Da dove nasce
+
+L'utente ha chiesto di "riattivare i token scaduti" per dare a questa sessione
+accesso a tutti i sistemi. L'inventario, fatto provando ogni accesso, ha detto
+un'altra cosa: **su PGB non è scaduto niente** (router, AP, HAOS con Supervisor
+via ssh, API di HA, AdGuard, Shelly, i due repo GitHub: tutto funziona). Verso
+CASA invece **non c'è mai stato** alcun accesso: PVE, OPNsense, Synology e HA di
+CASA rifiutano ssh, e il repo `infra-casa` rifiuta la chiave.
+
+### La chiave orfana
+
+Sul PVE esiste dall'11 agosto alle 23:42 `id_ed25519_casa_ro`, commento
+`pgb-pve-readonly-infra-casa`, con alias `github-casa` in `~/.ssh/config`. **Non
+era citata in nessun documento** e non è mai stata registrata su GitHub: un
+lavoro lasciato a metà, non un accesso decaduto. Da oggi ha uno scopo scritto:
+deploy key **in sola lettura** su `diam0nds/infra-casa`. Fingerprint
+`SHA256:azozrIG/EZjQp/bUPWYpuJIMaOiIJM6QmH3AerZLx34`.
+
+### Perché sola lettura e non root
+
+Il progetto tiene i due siti separati apposta: due repo, due chiavi git-crypt,
+un solo scrittore per repo, una sessione per casa. Root da questo PVE verso
+OPNsense, PVE e Synology di CASA toglierebbe la separazione: chi compromette PGB
+avrebbe anche la casa principale. E **PGB è il sito più esposto**: seconda casa,
+vuota per settimane, con la 443 candidata all'apertura per l'app.
+
+Lo stesso giorno la separazione si è dimostrata un vantaggio e non un ostacolo:
+il tunnel è stato diagnosticato da due sessioni, ognuna vedendo ciò che l'altra
+non poteva vedere.
+
+### Cosa vale da oggi
+
+| Verso CASA | Come |
+|---|---|
+| `infra-casa` | deploy key **senza** permesso di scrittura. I file sensibili restano cifrati con la chiave di CASA: si leggono solo quelli in chiaro |
+| Configurazioni di HA di CASA (automazioni, blueprint) | **niente token**: l'API di HA non distingue fra leggere e comandare. La sessione di CASA esporta i file ripuliti in `infra-common` |
+| ssh su PVE, OPNsense, Synology, HA di CASA | **nessuno** |
+
+Se un giorno servisse di più: chiave dedicata, limitata a `from="192.168.15.5"`,
+registrata in **entrambi** i `decisions.md`. Mai una chiave che fra sei mesi
+qualcuno trovi senza sapere da dove viene — com'è successo con questa.

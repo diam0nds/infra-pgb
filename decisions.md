@@ -1220,3 +1220,97 @@ Servizio abilitato al boot (`S95ddns`), config in `/etc/config/ddns` con modo
 ⚠️ Il token e' stato letto dalla configurazione dell'add-on e scritto sul router
 **passando per stdin**, mai come argomento di un comando: `/proc/<pid>/cmdline`
 e' leggibile da chiunque sul sistema.
+
+## 2026-11-15 — Un `mountpoint` senza timeout ha fermato i backup per 18 giorni
+
+**Sessione presidiata** (chiesta e confermata prima di ogni modifica, §0).
+
+### Il guasto, nell'ordine in cui si e' scoperto
+
+Non e' stato segnalato da nessuno: l'ho trovato guardando `wg show` e `ps`.
+
+| Fatto misurato | |
+|---|---|
+| Ultimo backup locale | `vzdump-*-2026_10_28` — **18 giorni prima** |
+| Job vzdump del 28/10 | **ancora in esecuzione**, PID 3538588, da 18 giorni |
+| Hook di replica | `pve-replica-remota.sh job-end`, PID 3540376, in `do_wait` |
+| Suo unico figlio | `mountpoint -q /mnt/backup-casa` in stato **D**, `rpc_wait_bit_killable` |
+| Tunnel `wg_site_sbt` | ultimo handshake **18 giorni fa** |
+| `pvestatd` | anch'esso in **D** sullo stesso mount |
+
+La catena, letta dalla fine: il tunnel verso CASA cade → il mount NFS resta
+nella tabella dei mount ma il server non risponde → `mountpoint -q`, che fa uno
+`stat()`, si pianta per sempre perche' il mount e' `hard` → l'hook aspetta il
+figlio → **vzdump tiene il lock del job** → i run successivi non partono mai.
+
+### La lezione, che e' nuova e va scritta per intero
+
+Lo script **aveva gia' i timeout**: su `mount`, su `rsync`, su `pvesm
+prune-backups`. Il commento diceva, correttamente, che «il timeout e' parte del
+progetto, non una precauzione». Ma la **prima sonda** — quella che decide se il
+mount c'e' — era nuda. Era l'unico punto scoperto, ed e' esattamente quello che
+si e' piantato.
+
+> Non basta mettere il timeout sull'operazione costosa: va messo su **ogni**
+> tocco del filesystem remoto, la verifica compresa. Guardare se una cosa c'e'
+> e' gia' un'operazione di rete.
+
+E il modo in cui e' fallito e' peggio del fallimento: **un processo appeso non
+fallisce**. Tutti e tre i canali di visibilita' progettati il 2026-08-12
+(journal, marcatore in `$REPO`, file di stato replicato fuori casa) presuppongono
+che lo script *arrivi* a dichiarare il guasto. Nessuno copre il caso in cui non
+ci arriva. Il marcatore non e' mai comparso, il journal si e' fermato a meta'
+riga, e `hosts/pve/state/replica-casa.txt` ha continuato a riportare una data —
+27 ottobre — che sembrava solo un po' vecchia.
+
+E' il fail-open di §5 nella sua forma piu' difficile da vedere: non un controllo
+che passa a vuoto, ma un controllo che **non termina**.
+
+### Danno collaterale che nessuno si aspettava
+
+La replica verso CASA e il backup locale erano stati deliberatamente separati
+(«con la copia separata un tunnel giu' fa saltare solo la replica»). Il
+ragionamento era giusto ma incompleto: la separazione vale per i **fallimenti**,
+non per i **blocchi**. Un hook appeso ferma il job che lo ospita, quindi una casa
+irraggiungibile ha fermato anche i backup che non la riguardano.
+
+### Cosa e' stato fatto
+
+1. `umount -f -l /mnt/backup-casa`. Il mount e' sparito, `mountpoint` e
+   `pvestatd` si sono liberati all'istante.
+2. **L'hook ha finito da solo, correttamente**: ha ritentato il mount (fallito
+   in 60 s per timeout), ha dichiarato guasto, ha scritto
+   `REPLICA-CASA-FALLITA.txt` ed e' uscito con 1. Non e' stato ucciso: ha fatto
+   esattamente cio' per cui era scritto, appena e' stato rimesso in condizione
+   di poterlo fare.
+3. Aggiunta `sonda_mount()` in `pve-replica-remota.sh`, con due accorgimenti che
+   servono **entrambi**:
+   - `timeout -k 5 15`: un processo in D ignora SIGTERM, quindi conta solo il
+     SIGKILL che arriva dopo. `rpc_wait_bit_killable` e' killable davvero.
+   - `umount -f -l` quando la sonda scade: senza, il mount marcio resta li' e
+     appende la sonda della notte dopo, e con essa `pvestatd`.
+4. Messo `timeout -k` anche su `mount` e su `pvesm status --storage`, che
+   potevano appendersi allo stesso modo.
+
+### Verificato, non dichiarato
+
+| Prova | Esito |
+|---|---|
+| `bash -n` | ok |
+| Hook a mano, mount assente | fallisce in **63 s** (60 di `mount` + sonda), marcatore scritto, `rc=1` |
+| Ramo "appeso", provato in isolamento con un comando che non torna | esito **2** in **15 s**, `umount -f -l` innescato |
+| `pvesm status` | risponde all'istante; `backup-casa` **inactive**, ed e' corretto |
+| Backup completo a mano | vedi ROADMAP, stessa data |
+
+### Cosa resta aperto, e non e' richiudibile da qui
+
+Il **tunnel verso CASA e' giu' da 18 giorni** ed e' la causa a monte.
+Il nome DDNS di CASA (in `secrets/`) risolve **allo stesso indirizzo** che il
+tunnel sta gia' usando come endpoint — confrontato il 2026-11-15 fra un resolver
+pubblico e `wg show`. Quindi non e' il DDNS di CASA disallineato, e da PGB non
+si puo' dire altro. Serve una sessione su CASA.
+
+Finche' resta giu', ogni notte il job vzdump risultera' **FALLITO** e il
+marcatore verra' riscritto. **E' il comportamento voluto**, non un effetto
+collaterale da zittire: i backup locali si fanno comunque, e la copia fuori casa
+non c'e' davvero.

@@ -15,6 +15,8 @@ restano qui con la data, così si vede cosa è già stato fatto e quando.
 > |---|---|---|
 > | 2026-08-12 | **presidiata** | correzioni a questa roadmap dopo l'assessment di CASA; nessuna modifica agli apparati di rete |
 > | 2026-08-12 (ricon­fermata alle 10:10) | **presidiata** | replica esterna dei backup resa meccanismo: `fstab`, storage PVE, hook `vzdump`, ripristino provato. Solo lato PVE, nessuna modifica ai router |
+> | 2026-08-17 | **presidiata** | assessment di Home Assistant, bonifica del registro, 9 aree, mappatura a vista dei 18 canali, conversione relè→luce sugli 11 Shelly. Nessuna modifica a rete, router o AdGuard; sui dispositivi solo `appliance_type`, reversibile |
+> | 2026-11-15 | **presidiata** | sbloccati i backup fermi dal 28 ottobre: `umount -f -l` del mount NFS marcio verso CASA e sonda con timeout nell'hook di replica. Nessuna modifica a rete, router, AdGuard o Home Assistant |
 
 ---
 
@@ -978,6 +980,47 @@ riuscita. Con la copia separata, un tunnel giu' fa saltare solo la replica.
 Da fare dopo la configurazione DSM: montare, misurare un trasferimento **reale**,
 aggiungere la copia dopo il job, registrare come storage PVE per i ripristini da
 interfaccia, e **provare un ripristino dalla copia remota**.
+
+#### 🔴 Guasto 28 ott – 15 nov 2026: 18 giorni senza backup, in silenzio
+
+**Trovato il 2026-11-15** guardando `wg show` e `ps`, non segnalato da nulla.
+Cronaca completa e lezione in `decisions.md`, stessa data. In breve:
+
+| | |
+|---|---|
+| Causa a monte | il **tunnel verso CASA è caduto** il 28 ottobre |
+| Cosa si è piantato | `mountpoint -q /mnt/backup-casa` nell'hook, in stato **D** su un mount `hard` |
+| Perché è durato 18 giorni | l'hook appeso ha tenuto il **lock del job vzdump**: nessun backup è più partito, **nemmeno quello locale** |
+| Perché nessuno se n'è accorto | tutti e tre i canali di visibilità presuppongono che lo script *arrivi* a dichiarare il guasto. **Un processo appeso non fallisce** |
+| Danno collaterale | `pvestatd` anch'esso in D sullo stesso mount |
+
+⚠️ Ironia da non perdere: lo storage era stato fatto di tipo `dir` +
+`is_mountpoint` **proprio** per non far appendere `pvestatd` da un tunnel giù.
+La precauzione era giusta ma copriva il caso "mount assente", non il caso "mount
+presente e server sparito", che è quello che è successo.
+
+**Risolto il 2026-11-15** (sessione presidiata): `umount -f -l`, l'hook ha
+finito da sé dichiarando il guasto, e `sonda_mount()` con `timeout -k` + auto-
+`umount` impedisce che si ripeta. `timeout -k` anche su `mount` e `pvesm status`.
+
+> Lezione, nuova: non basta il timeout sull'operazione costosa. Va su **ogni**
+> tocco del filesystem remoto, **la verifica compresa**. Guardare se una cosa
+> c'è è già un'operazione di rete.
+
+#### ⏭️ Resta aperto: il tunnel verso CASA è ancora giù
+
+Dal 28 ottobre. Il nome DDNS di CASA (in `secrets/`) risolve **allo stesso
+indirizzo** che il tunnel sta già usando come endpoint — verificato il
+2026-11-15 interrogando un resolver pubblico e confrontando con `wg show`.
+Quindi **non** è il DDNS di CASA disallineato, e da PGB non si può dire altro. La causa è dal lato CASA (OPNsense,
+inoltro UDP 52365, o IP pubblico cambiato senza che il DDNS lo sappia).
+
+Finché resta giù: i backup **locali** si fanno, la copia **fuori casa** no, il
+job vzdump risulta FALLITO ogni notte e `REPLICA-CASA-FALLITA.txt` viene
+riscritto. È il comportamento voluto, non un allarme da zittire.
+
+**Serve una sessione su CASA.** Prompt da preparare, come già fatto per AdGuard
+e per l'export NAS.
 
 ### 5. Riavvio automatico dopo blackout
 BIOS `Restore on AC Power Loss` da `Power Off` a `Power On`. L'utente

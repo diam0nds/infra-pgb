@@ -1314,3 +1314,105 @@ Finche' resta giu', ogni notte il job vzdump risultera' **FALLITO** e il
 marcatore verra' riscritto. **E' il comportamento voluto**, non un effetto
 collaterale da zittire: i backup locali si fanno comunque, e la copia fuori casa
 non c'e' davvero.
+
+## 2026-11-15 — Il tunnel verso CASA: era cambiato l'IP di PGB, non quello di CASA
+
+**Sessione presidiata.** Seguito della voce precedente: il tunnel giù era la
+causa a monte dei 18 giorni senza backup.
+
+### La diagnosi si è fatta a due mani, e nessuna delle due bastava
+
+**Da CASA** (sessione sul PVE `192.168.10.6`, con il prompt
+`infra-common/prompt-diagnosi-tunnel-casa.md`): DDNS di CASA aggiornato,
+WireGuard su OPNsense vivo sulla sua porta, peer di PGB presente con le chiavi
+e gli allowed IPs giusti, nessuna modifica di configurazione nella finestra, e la
+misura decisiva — **0 pacchetti da PGB in 80 s di cattura sulla WAN**, mentre il
+road-warrior dell'utente entrava sulla stessa porta. Tutto CASA è sano.
+
+Dentro quel resoconto c'era il dato che da lì non si poteva collegare: l'ultimo
+endpoint noto di PGB visto da OPNsense era un **IP pubblico diverso** da quello
+che PGB pubblica oggi via DDNS. A cambiare IP il 28 ottobre era stato **PGB**.
+La sessione su CASA cercava un cambio di IP di CASA: la casa sbagliata.
+
+**Da PGB**, la voce di conntrack del flusso del tunnel, letta due volte a 12 s:
+
+| Direzione | prima | dopo |
+|---|---|---|
+| CASA → PGB | 21.737.921 pacchetti | 21.737.921 — **fermo** |
+| PGB → CASA | 40.633.901 | 40.633.904 — **sale** |
+| scadenza | 155 s | 179 s — **rinfrescata** |
+
+E `wg show transfer` a 60 s di distanza: **1480 byte = 10 handshake initiation
+da 148 byte**. PGB trasmette, verso l'endpoint giusto, e niente arriva.
+
+La prova che chiude: **il PC dell'utente** sulla LAN di PGB — stesso router,
+stesso modem, stessa destinazione, stessa porta — **funzionava**. L'unica
+differenza è l'età del flusso: il suo era nato dopo il cambio di IP.
+
+### Il meccanismo
+
+Il tunnel lo apre PGB da `192.168.51.2:51821`. Il modem dell'operatore traduce
+quel flusso con l'IP pubblico del momento e ricorda la traduzione finché c'è
+traffico. Dopo il cambio di IP del 28 ottobre alle 01:14, PGB ha continuato a
+rimandare un handshake ogni 5 s: ogni pacchetto rinfrescava la traduzione
+vecchia, che quindi **non è mai scaduta**. I pacchetti uscivano con un IP che
+non era più nostro. Sarebbe andato avanti indefinitamente.
+
+### Due trappole del metodo, entrambe nuove
+
+1. **Il flag `[ASSURED]` ha mentito.** La memoria fra sessioni diceva di
+   cercare `[UNREPLIED]` per distinguere "non esco" da "non mi rispondono". Qui
+   la voce era `[ASSURED]`, perché ricordava risposte di settimane prima.
+   **Si confrontano i contatori nel tempo, non i flag.**
+2. **La stessa memoria consigliava di "provare a cambiare la porta locale"**
+   come primo rimedio, e riportava la porta come 51900 — entrambe cose
+   corrette in ROADMAP il 12 agosto e mai riportate lì. Cambiare porta qui
+   avrebbe funzionato (flusso nuovo = traduzione nuova) e avrebbe sepolto la
+   causa, esattamente come ad agosto. Memoria riscritta.
+
+### Rimedio applicato
+
+`ifdown wg_site_sbt`, **600 s di silenzio**, `ifup`. Nessuna modifica di
+configurazione. Lo script girava **sul router**, staccato dalla mia ssh, così che
+il tunnel ripartisse anche se la connessione fosse caduta.
+
+⚠️ Primo tentativo andato a vuoto senza danni: **`nohup` non esiste su questo
+router** (stessa famiglia di `paste` e `timeout`, §12-bis). Il comando è fallito,
+il tunnel è rimasto com'era, e me ne sono accorto solo perché ho riletto lo stato
+dopo 3 secondi invece di fidarmi del lancio. Rifatto con `start-stop-daemon -b`
+e `trap "" HUP` nello script.
+
+| Ora | Evento |
+|---|---|
+| 10:57:27 | `ifdown`, inizio del silenzio |
+| 10:59:19 | la voce conntrack sul router scade (180 s, come da `nf_conntrack_udp_timeout_stream`) |
+| 11:07:32 | `ifup` |
+| 11:07:28→33 | **handshake** — un secondo dopo la riaccensione |
+| subito dopo | `192.168.10.1`, `.5`, `.6` rispondono dal PVE |
+
+### Perché si ripresenterà, e cosa lo impedisce
+
+Su una linea FWA il cambio di IP è normale. Il `wireguard_watchdog` di OpenWrt
+**non serve**: ri-risolve il nome dell'endpoint, ma qui l'endpoint era giusto ed
+era il flusso a essere avvelenato.
+
+Preparato `infra-common/scripts/router/wg-nat-watchdog.sh`: se non c'è handshake
+da 10 minuti, ferma il tunnel, 10 minuti di silenzio, lo riaccende. Al massimo un
+intervento ogni 30 minuti (se CASA è davvero giù non si gira a vuoto), niente
+interventi nei primi 10 minuti di vita dell'interfaccia, un solo esemplare per
+volta con `flock`. Il riavvio ri-risolve anche il nome, quindi copre **anche** un
+cambio di IP di CASA. Usa solo strumenti verificati presenti sul router.
+
+✅ **Installato il 2026-11-15** con l'ok dell'utente: `/usr/bin/wg-nat-watchdog`,
+checksum identico alla fonte, cron `*/5`, aggiunto a `/etc/sysupgrade.conf`.
+Provati entrambi i rami: col tunnel sano esce in 0 s senza toccare nulla; a
+secco, con soglia a 1 s e azioni sostituite da stampe, esegue
+ifdown/pausa/ifup e al giro successivo **riposa** invece di ripetere.
+
+### Su CASA non serve nessuna modifica
+
+Una correzione al resoconto della sessione di CASA: "PGB sta dietro doppio NAT
+senza inoltro" non è del tutto esatto. La voce di conntrack del tunnel sul router
+era nata da un pacchetto **in ingresso** da CASA sulla 51821: un inoltro sul
+modem esiste o esisteva. È la voce aperta dall'agosto "chiarire l'inoltro UDP
+51821 sul router del provider".

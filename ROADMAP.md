@@ -1007,29 +1007,24 @@ finito da sé dichiarando il guasto, e `sonda_mount()` con `timeout -k` + auto-
 > tocco del filesystem remoto, **la verifica compresa**. Guardare se una cosa
 > c'è è già un'operazione di rete.
 
-#### ⏭️ Resta aperto: il tunnel verso CASA è ancora giù
+#### ✅ Il tunnel verso CASA — RISOLTO il 2026-11-15
 
-Dal 28 ottobre. Il nome DDNS di CASA (in `secrets/`) risolve **allo stesso
-indirizzo** che il tunnel sta già usando come endpoint — verificato il
-2026-11-15 interrogando un resolver pubblico e confrontando con `wg show`.
-Quindi **non** è il DDNS di CASA disallineato, e da PGB non si può dire altro. La causa è dal lato CASA (OPNsense,
-inoltro UDP 52365, o IP pubblico cambiato senza che il DDNS lo sappia).
+Giù dal 28 ottobre alle 01:14. **La causa non era a CASA**: era cambiato l'IP
+pubblico **di PGB**, e il modem dell'operatore teneva viva la traduzione NAT
+vecchia perché PGB la rinfrescava con un handshake ogni 5 s. Diagnosi fatta a due
+mani — CASA ha dimostrato che da lei era tutto sano e che i pacchetti non
+arrivavano, PGB ha dimostrato che partivano — e chiusa dal PC dell'utente, che
+dallo stesso modem verso la stessa porta funzionava perché il suo flusso era
+nato dopo il cambio. Dettagli in `decisions.md`, stessa data.
 
-Finché resta giù: i backup **locali** si fanno, la copia **fuori casa** no, il
-job vzdump risulta FALLITO ogni notte e `REPLICA-CASA-FALLITA.txt` viene
-riscritto. È il comportamento voluto, non un allarme da zittire.
+Rimedio: 10 minuti di tunnel spento, poi riacceso. Handshake in un secondo,
+nessuna configurazione toccata.
 
-**Serve una sessione su CASA.** ✅ Prompt pronto dal 2026-11-15:
-`infra-common/prompt-diagnosi-tunnel-casa.md` — numeri misurati da PGB con la
-data, cinque ipotesi in ordine di probabilità e di costo, il test che spacca in
-due il problema (cattura di 60 s sulla WAN di OPNsense: i pacchetti di PGB
-arrivano o no?) e una sezione "cosa NON fare".
-
-⚠️ **Dato del 2026-11-15 che restringe il campo**: la VPN road-warrior dal PC
-dell'utente verso CASA **funziona**. Quindi l'endpoint pubblico di CASA risponde
-e WireGuard su OPNsense è vivo. Se quel client usa lo stesso nome DDNS del
-tunnel, l'ipotesi del record DDNS stantio è morta in partenza e il guasto è
-specifico del **peer di PGB**. È la prima domanda del prompt.
+✅ **Watchdog installato il 2026-11-15**: `/usr/bin/wg-nat-watchdog` sul router,
+cron ogni 5 minuti, in `sysupgrade.conf`. Senza handshake da 10 minuti spegne il
+tunnel, 10 minuti di silenzio, lo riaccende; al massimo una volta ogni 30
+minuti. Copre anche un cambio di IP di CASA. Fonte in
+`infra-common/scripts/router/wg-nat-watchdog.sh`.
 
 ### 5. Riavvio automatico dopo blackout
 BIOS `Restore on AC Power Loss` da `Power Off` a `Power On`. L'utente

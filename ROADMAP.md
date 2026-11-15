@@ -1019,8 +1019,17 @@ Finché resta giù: i backup **locali** si fanno, la copia **fuori casa** no, il
 job vzdump risulta FALLITO ogni notte e `REPLICA-CASA-FALLITA.txt` viene
 riscritto. È il comportamento voluto, non un allarme da zittire.
 
-**Serve una sessione su CASA.** Prompt da preparare, come già fatto per AdGuard
-e per l'export NAS.
+**Serve una sessione su CASA.** ✅ Prompt pronto dal 2026-11-15:
+`infra-common/prompt-diagnosi-tunnel-casa.md` — numeri misurati da PGB con la
+data, cinque ipotesi in ordine di probabilità e di costo, il test che spacca in
+due il problema (cattura di 60 s sulla WAN di OPNsense: i pacchetti di PGB
+arrivano o no?) e una sezione "cosa NON fare".
+
+⚠️ **Dato del 2026-11-15 che restringe il campo**: la VPN road-warrior dal PC
+dell'utente verso CASA **funziona**. Quindi l'endpoint pubblico di CASA risponde
+e WireGuard su OPNsense è vivo. Se quel client usa lo stesso nome DDNS del
+tunnel, l'ipotesi del record DDNS stantio è morta in partenza e il guasto è
+specifico del **peer di PGB**. È la prima domanda del prompt.
 
 ### 5. Riavvio automatico dopo blackout
 BIOS `Restore on AC Power Loss` da `Power Off` a `Power On`. L'utente

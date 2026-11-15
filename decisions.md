@@ -1462,3 +1462,25 @@ non poteva vedere.
 Se un giorno servisse di più: chiave dedicata, limitata a `from="192.168.15.5"`,
 registrata in **entrambi** i `decisions.md`. Mai una chiave che fra sei mesi
 qualcuno trovi senza sapere da dove viene — com'è successo con questa.
+
+### Verificata, su entrambi i versi — 2026-11-15
+
+L'utente ha registrato la deploy key su GitHub. Due prove, nessuna delle quali
+poteva scrivere anche se il permesso ci fosse stato:
+
+| Prova | Esito |
+|---|---|
+| `git ls-remote` | ✅ legge `HEAD` e `main` |
+| `git-receive-pack` aperto e chiuso con il solo flush `0000` (nessun comando) | ✅ **rifiutato**: *"The key you are authenticating with has been marked as read only."* |
+| `git push --dry-run` verso un ramo nuovo | ✅ rifiutato |
+
+Servono entrambi i versi: una casella "Allow write access" spuntata per sbaglio
+non darebbe alcun errore, e lo si scoprirebbe il giorno in cui serviva saperlo.
+
+⚠️ **Falso allarme mio, registrato perché è la trappola del metodo.** Il primo
+conteggio dei file cifrati di `infra-casa` ha detto **zero**, canary compreso. Era
+il controllo: `head -c 10 | grep -q GITCRYPT` non riconosce l'intestazione
+`\0GITCRYPT\0` per via del byte nullo iniziale. Con un confronto esatto sui byte:
+**15 cifrati, 5 in chiaro**, esattamente l'allowlist di CASA. Prima di dichiarare
+un guasto altrui, si verifica lo strumento su un caso noto — qui il canary, che
+esiste proprio per questo.

@@ -16,7 +16,7 @@ restano qui con la data, così si vede cosa è già stato fatto e quando.
 > | 2026-08-12 | **presidiata** | correzioni a questa roadmap dopo l'assessment di CASA; nessuna modifica agli apparati di rete |
 > | 2026-08-12 (ricon­fermata alle 10:10) | **presidiata** | replica esterna dei backup resa meccanismo: `fstab`, storage PVE, hook `vzdump`, ripristino provato. Solo lato PVE, nessuna modifica ai router |
 > | 2026-08-17 | **presidiata** | assessment di Home Assistant, bonifica del registro, 9 aree, mappatura a vista dei 18 canali, conversione relè→luce sugli 11 Shelly. Nessuna modifica a rete, router o AdGuard; sui dispositivi solo `appliance_type`, reversibile |
-> | 2026-11-15 | **presidiata** | sbloccati i backup fermi dal 28 ottobre: `umount -f -l` del mount NFS marcio verso CASA e sonda con timeout nell'hook di replica. Nessuna modifica a rete, router, AdGuard o Home Assistant |
+> | 2026-11-15 | **presidiata** | sbloccati i backup fermi dal 28 ottobre; tunnel verso CASA riparato (NAT del modem dopo cambio IP di PGB) e watchdog sul router; HACS 2.0.5 e Midea passati al fork (3 split tornati); `availability` in Zigbee2MQTT, 3 sensori muti dal 16 ago ora visibili come tali |
 
 ---
 

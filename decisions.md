@@ -1484,3 +1484,79 @@ il controllo: `head -c 10 | grep -q GITCRYPT` non riconosce l'intestazione
 **15 cifrati, 5 in chiaro**, esattamente l'allowlist di CASA. Prima di dichiarare
 un guasto altrui, si verifica lo strumento su un caso noto — qui il canary, che
 esiste proprio per questo.
+
+## 2026-11-15 — HACS e Midea riparati, e tre sensori Zigbee che fingevano di funzionare
+
+**Sessione presidiata.** Prerequisiti per robot e riscaldamento con i Midea.
+
+### Rete di sicurezza, prima di toccare
+
+| | |
+|---|---|
+| Backup HA completo | `pre-hacs-midea-2026-11-15`, 83 MB, verificato in elenco |
+| Backup della VM | quello delle 09:54 di oggi, già replicato sul Synology di CASA |
+| Token e chiavi dei 3 split | `secrets/ha-midea-pre-fork-2026-11-15/`, **cifrati** (verificato con `check-attr`) |
+| Codice vecchio delle due integrazioni | `/config/rollback-2026-11-15/` su HAOS + copia locale sul PVE |
+
+Una modifica per riavvio, così un guasto dice da solo quale delle due l'ha fatto.
+
+### HACS 1.34.0 → 2.0.5, a mano
+
+Scaricato sul PVE, zip verificato, versione minima di HA 2024.4.1. Il vecchio
+`register_static_path` che lo rompeva ad agosto in 2.0.5 sopravvive **solo come
+ripiego** per HA anteriori al 2024.7: sul 2026.8 usa la funzione nuova. Dopo il
+riavvio: `loaded`.
+
+### `midea_ac_lan`: dall'originale al fork
+
+La v0.5.7 installata era quella di `georgezhao2010`, **non più mantenuta**. Il fork
+`wuwentao/midea_ac_lan` v2026.10.0 (23 ottobre) usa **lo stesso dominio**, quindi
+HA aggancia le config entry esistenti. Prima di installare, confrontati i campi
+che il fork legge con quelli salvati (stessi), e letta la sua migrazione: 2.1→2.2
+aggiunge solo MAC e seriale **e non fallisce se non li trova**. Verificata anche la
+raggiungibilità dei 3 split sulla 6444.
+
+Risultato: **3 su 3 `loaded`**, con le temperature reali delle stanze. **Nessun
+nuovo accesso al cloud Midea.** Fermi da agosto, tornati.
+
+Restano da fare: dare nomi leggibili ai tre `climate.<numero>_climate`, e
+registrare il fork come repository in HACS, così gli aggiornamenti passano di lì.
+
+### Tre sensori Zigbee su quattro, muti da tre mesi e mostrati come vivi
+
+`SONOFF SNZB-02` (la stanza a 13,17 °C), `SONOFF SNZB-03` (presenza) e la presa
+`TS0121`: ultimo messaggio ricevuto da HA il **16 agosto alle 11:36:24**, tutti nello
+stesso secondo, quello del salto di versione. Eppure HA li mostrava con valori
+normali e non come `unavailable`.
+
+Perché, in due pezzi:
+
+1. Zigbee2MQTT **non aveva il controllo di disponibilità**.
+2. A ogni riavvio di HA, Zigbee2MQTT **ripubblica i valori che ha in memoria**.
+   Nel log i tre compaiono solo alle 12:39:09 e alle 12:42:04 — i due riavvii di
+   oggi — sempre con gli stessi numeri. Non sono messaggi radio: è una cache.
+
+Il segno che non mente è `last_reported`, che HA aggiorna **anche quando il valore
+è identico**.
+
+Prova attiva sulla presa, che è alimentata e quindi sempre in ascolto: un `get`
+radio dello stato (lettura, non comando) **fallisce dopo 10 s e i tentativi di
+recupero**. Staccata dalla corrente o uscita dalla rete: da remoto non si
+distingue.
+
+**Applicato**: `availability: true` in Zigbee2MQTT (copia della config in
+`rollback-2026-11-15/`). Al riavvio ha subito provato la presa e l'ha segnata
+offline; in HA i tre sono **`unavailable`**, il Tuya resta valido.
+
+⚠️ **Il caso peggiore evitato**: un antigelo costruito su quel sensore avrebbe
+letto 13,17 °C per sempre, mentre la stanza poteva gelare. La lezione è la stessa
+del backup appeso di stamattina, in un altro sottosistema: **un silenzio deve
+diventare uno stato visibile**, altrimenti sembra normalità.
+
+### Il termostato BHT-6000 è passato a `off` — non da noi
+
+Alle **11:58** (10:58 UTC) da `auto` a `off`. Il primo riavvio di HA è delle 12:37: in
+quella finestra solo letture. I due riavvii hanno prodotto la sequenza attesa
+(`unavailable` → `unknown` → di nuovo `off`) senza cambiare lo stato. Il BHT parla
+con Mosquitto, che non è stato riavviato. **Non riacceso**: chiesto all'utente, che
+era sul posto.

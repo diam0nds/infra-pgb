@@ -1560,3 +1560,19 @@ quella finestra solo letture. I due riavvii hanno prodotto la sequenza attesa
 (`unavailable` → `unknown` → di nuovo `off`) senza cambiare lo stato. Il BHT parla
 con Mosquitto, che non è stato riavviato. **Non riacceso**: chiesto all'utente, che
 era sul posto.
+
+## 2026-11-15 — Termostato spento mentre la casa resta vuota: scelta dell'utente
+
+**Decisione dell'utente**, presa sul posto prima di lasciare PGB.
+
+Il BHT-6000 l'ha spento l'utente alle 11:58. Prima che partisse è stato
+messo davanti al quadro completo: termostato spento, Midea spenti, sensore della
+stanza fredda muto dal 16 agosto, nessun antigelo in Home Assistant. Quindi, per
+le settimane in cui la casa resta vuota, **nessuna protezione dal gelo**.
+
+Proposta fatta e **rifiutata**: termostato in `heat` a 7 °C (il firmware
+WThermostat accetta da 5 °C), con la protezione nel termostato e non in HA, perché
+dopo un blackout il PVE resta spento per giorni e HA con lui.
+
+**Da non "correggere" in una sessione futura senza riparlarne con l'utente.**
+Se si costruisce un antigelo in HA, va proposto, non attivato da sé.

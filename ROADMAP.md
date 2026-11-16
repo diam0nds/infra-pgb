@@ -19,6 +19,26 @@ restano qui con la data, così si vede cosa è già stato fatto e quando.
 > | 2026-11-15 | **presidiata** | sbloccati i backup fermi dal 28 ottobre; tunnel verso CASA riparato (NAT del modem dopo cambio IP di PGB) e watchdog sul router; HACS 2.0.5 e Midea passati al fork (3 split tornati); `availability` in Zigbee2MQTT, 3 sensori muti dal 16 ago ora visibili come tali |
 > | 2026-11-15 dalle 12:46 | **non presidiata** | l'utente lascia PGB e torna a CASA. Da qui: niente riavvii di router o PVE, niente firmware, niente modifiche di rete che possano tagliare l'accesso, niente aggiornamenti major (Zigbee2MQTT 2.x, HAOS, DuckDNS 2.0). Restano sul posto da fare: presa Zigbee, batterie dei due sensori, BIOS |
 
+
+## ▶️ Da dove ripartire — aggiornato 2026-11-16
+
+Stato alla chiusura della sessione del 15-16 novembre: repo puliti e pushati,
+backup e replica verso CASA di nuovo regolari, tunnel su con watchdog. **Prima
+di tutto chiedere la modalità** (all'ultima chiusura: non presidiata).
+
+| Lavoro | Stato | Cosa serve per andare avanti |
+|---|---|---|
+| **Notifiche** (oltre a backup falliti e VPN giù) | progettato, non iniziato | scelta del canale da parte dell'utente: ntfy o Telegram. Poi, lavoro additivo e sicuro anche non presidiato: battito giornaliero dal router, avviso dal router se il PVE non risponde, controlli dal PVE (vzdump, replica, `BACKUP-FALLITO`, disco, guest). La posta del PVE **non** arriva, vedi sotto |
+| **App HA fuori casa** | causa nota: DNAT `HA-HTTPS-da-internet` disabilitato, `wg0` mai usato | decisione dell'utente: riaprire la 443 (dopo verifica 2FA, `trusted_proxies`, `ip_ban`, c'è già un `configuration.yaml.prima-ipban`) oppure VPN `wg0` (serve UDP 51820 inoltrato sul modem) |
+| **`*.pgb.diamanti.cloud`** su Cloudflare | piano pronto | l'utente crea i record (A `pgb`, CNAME `ha.pgb`, nuvola grigia) e due token; quello DDNS va in `/root/.creds-pgb` come `CF_PGB_DDNS_TOKEN`. Il passaggio del certificato richiede sessione presidiata |
+| **Robot aspirapolvere e blueprint riscaldamento** (anche sui Midea) | in attesa | export di CASA in `infra-common/ha/da-casa/` (prompt `infra-common/prompt-export-ha-casa.md`) e modello/app del robot dall'utente |
+| **Midea**: nomi leggibili ai 3 `climate.*`, fork wuwentao registrato in HACS | da fare, sicuro da remoto | niente |
+| **Termostato** | spento per decisione dell'utente (2026-11-15) | **non riaccendere né attivare antigelo d'iniziativa**: solo proporre |
+| **Zigbee**: presa TS0121, SNZB-02, SNZB-03 | diagnosticati, non rispondono via radio | sessione presidiata: ricollegare/riassociare, batterie |
+| Aggiornamenti major (Z2M 2.x, HAOS, DuckDNS 2.0, Mosquitto 7, NGINX) | rimandati | sessione presidiata |
+| Marker `DOCUMENTI-NON-SALVATI.txt` in collect-configs, rimozione del cron `iot-profile` | proposti, non approvati | ok dell'utente |
+| BIOS `Restore on AC Power Loss` | azione dell'utente | tastiera USB sul posto |
+
 ---
 
 ## ✅ Fatto

@@ -21,7 +21,7 @@ restano qui con la data, così si vede cosa è già stato fatto e quando.
 > | 2026-11-17 08:25 | **non presidiata** | dichiarata dall'utente a inizio sessione. Stessi vincoli della riga precedente. Primo lavoro: diagnosi della replica verso CASA fallita il 16 e il 17 con NAS raggiungibile |
 
 
-## ▶️ Da dove ripartire — aggiornato 2026-11-16
+## ▶️ Da dove ripartire — aggiornato 2026-11-17
 
 Stato alla chiusura della sessione del 15-16 novembre: repo puliti e pushati,
 backup e replica verso CASA di nuovo regolari, tunnel su con watchdog. **Prima
@@ -33,7 +33,8 @@ di tutto chiedere la modalità** (all'ultima chiusura: non presidiata).
 | **App HA fuori casa** | causa nota: DNAT `HA-HTTPS-da-internet` disabilitato, `wg0` mai usato | decisione dell'utente: riaprire la 443 (dopo verifica 2FA, `trusted_proxies`, `ip_ban`, c'è già un `configuration.yaml.prima-ipban`) oppure VPN `wg0` (serve UDP 51820 inoltrato sul modem) |
 | **`*.pgb.diamanti.cloud`** su Cloudflare | piano pronto | l'utente crea i record (A `pgb`, CNAME `ha.pgb`, nuvola grigia) e due token; quello DDNS va in `/root/.creds-pgb` come `CF_PGB_DDNS_TOKEN`. Il passaggio del certificato richiede sessione presidiata |
 | **Robot aspirapolvere e blueprint riscaldamento** (anche sui Midea) | in attesa | export di CASA in `infra-common/ha/da-casa/` (prompt `infra-common/prompt-export-ha-casa.md`) e modello/app del robot dall'utente |
-| **Midea**: nomi leggibili ai 3 `climate.*`, fork wuwentao registrato in HACS | da fare, sicuro da remoto | niente |
+| **Replica verso CASA**: falsi guasti il 16 e 17 nov | corretto il 2026-11-17 (5 tentativi, PVE dà 2 s al df del NAS) | controllare che `REPLICA-CASA-FALLITA.txt` sparisca dopo la notte del 17-18; se no, `journalctl -t vzdump-replica`. Aperto: cosa rallenta il NAS di CASA alle 02:00 |
+| **Midea**: nomi leggibili ✅ 2026-11-17 (`climate.<area>_climatizzatore`); fork wuwentao da registrare in HACS | nomi fatti; HACS **disattivato**: token GitHub non valido (`Bad credentials`) | l'utente riautorizza HACS su GitHub (device code, si fa anche da remoto). Poi scaricare da HACS la **stessa** v2026.10.0 e riavviare HA |
 | **Termostato** | spento per decisione dell'utente (2026-11-15) | **non riaccendere né attivare antigelo d'iniziativa**: solo proporre |
 | **Zigbee**: presa TS0121, SNZB-02, SNZB-03 | diagnosticati, non rispondono via radio | sessione presidiata: ricollegare/riassociare, batterie |
 | Aggiornamenti major (Z2M 2.x, HAOS, DuckDNS 2.0, Mosquitto 7, NGINX) | rimandati | sessione presidiata |

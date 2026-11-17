@@ -1600,3 +1600,33 @@ irraggiungibile". Provato a secco il solo blocco, su storage vero e inesistente.
 resta quella del 15 novembre fino alla prossima notte.
 
 **Aperto**: cosa rallenta il NAS di CASA alle 02:00 (si vede solo da CASA).
+
+## 2026-11-17 — Midea: nomi leggibili; HACS fermo per il token GitHub
+
+Sessione **non presidiata**. Backup completo di HA prima di toccare nulla:
+`pre-midea-nomi-2026-11-17` (slug `6dd18470`).
+
+**Fatto** (con ok dell'utente):
+- i tre dispositivi `Split Sala`, `Split-camera`, `Split-corridoio` si chiamano
+  tutti **`Climatizzatore`**: la stanza la dà l'area, come per le luci ad agosto;
+- le **78 entità** rigenerate come `<area>_climatizzatore[_<funzione>]`, es.
+  `climate.soggiorno_climatizzatore`, `climate.camera_matrimoniale_climatizzatore`,
+  `climate.corridoio_climatizzatore`. Mappa vecchio → nuovo in
+  `secrets/ha-midea-rinomina-2026-11-17.json` (cifrato: i vecchi id contengono
+  l'identificativo degli split);
+- dashboard, vista **Climate**: aggiornate nello stesso passaggio le 4 schede che
+  usavano i vecchi id, e dato un `name` esplicito (Soggiorno, Camera
+  matrimoniale, Corridoio, Temperatura esterna), altrimenti tre schede uguali.
+  L'automazione usa id di registro: non toccata.
+
+L'area di `Split-camera` (Camera matrimoniale) è stata chiesta all'utente perché
+il rename di agosto ci aveva trascinato uno split; l'utente ha approvato la
+proposta senza correggerla.
+
+**Non fatto: il fork in HACS.** La prima chiamata a GitHub di HACS ha risposto
+`Bad credentials` e HACS si è **disattivato da solo** (`HACS is disabled -
+invalid_token`). Il token GitHub di HACS non vale più. Non ha effetto sui Midea
+(il codice è in `custom_components`, file invariati, verificato con md5), ma
+**finché non si riautorizza HACS non arrivano aggiornamenti per nessuna
+integrazione custom**. La riautorizzazione richiede l'utente su GitHub (device
+code), non la presenza fisica. Niente riavvio di HA fatto, perché non serviva.

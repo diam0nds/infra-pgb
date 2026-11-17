@@ -1576,3 +1576,27 @@ dopo un blackout il PVE resta spento per giorni e HA con lui.
 
 **Da non "correggere" in una sessione futura senza riparlarne con l'utente.**
 Se si costruisce un antigelo in HA, va proposto, non attivato da sé.
+
+## 2026-11-17 — Replica verso CASA: il controllo dello storage ritenta
+
+Sessione **non presidiata** (dichiarata alle 08:25). Solo PVE, nessuna modifica alla rete.
+
+**Sintomo**: `REPLICA-CASA-FALLITA.txt` il 16 e il 17 alle 02:36, motivo "storage
+non attivo", con tunnel su, NAS raggiungibile (ping e porta 2049) e
+`/mnt/backup-casa` montato. Il guasto veniva dichiarato nello stesso secondo
+dell'avvio, senza il tentativo di mount: la sonda del mount passava.
+
+**Causa**: PVE considera attivo uno storage `dir` solo se `df` risponde entro
+**2 secondi**, valore fisso nel codice (`PVE::Storage::Plugin::status`). Fra le
+02:00 e le 02:45 il Synology di CASA è lento ogni notte: `pvestatd` registra
+timeout a quell'ora almeno dal 10 ottobre, più fitti dal 26. Il controllo delle
+02:36 è sempre stato un tiro di dado; il `2>/dev/null` ne nascondeva l'esito.
+
+**Rimedio** in `infra-common/scripts/pve-replica-remota.sh`: fino a 5 tentativi a
+30 s, uscita di `pvesm` nel journal, marker che distingue "NAS lento" da "NAS
+irraggiungibile". Provato a secco il solo blocco, su storage vero e inesistente.
+
+**Non fatto, su scelta dell'utente**: la replica manuale. La copia fuori casa
+resta quella del 15 novembre fino alla prossima notte.
+
+**Aperto**: cosa rallenta il NAS di CASA alle 02:00 (si vede solo da CASA).

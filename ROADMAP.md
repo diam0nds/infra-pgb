@@ -18,6 +18,7 @@ restano qui con la data, così si vede cosa è già stato fatto e quando.
 > | 2026-08-17 | **presidiata** | assessment di Home Assistant, bonifica del registro, 9 aree, mappatura a vista dei 18 canali, conversione relè→luce sugli 11 Shelly. Nessuna modifica a rete, router o AdGuard; sui dispositivi solo `appliance_type`, reversibile |
 > | 2026-11-15 | **presidiata** | sbloccati i backup fermi dal 28 ottobre; tunnel verso CASA riparato (NAT del modem dopo cambio IP di PGB) e watchdog sul router; HACS 2.0.5 e Midea passati al fork (3 split tornati); `availability` in Zigbee2MQTT, 3 sensori muti dal 16 ago ora visibili come tali |
 > | 2026-11-15 dalle 12:46 | **non presidiata** | l'utente lascia PGB e torna a CASA. Da qui: niente riavvii di router o PVE, niente firmware, niente modifiche di rete che possano tagliare l'accesso, niente aggiornamenti major (Zigbee2MQTT 2.x, HAOS, DuckDNS 2.0). Restano sul posto da fare: presa Zigbee, batterie dei due sensori, BIOS |
+> | 2026-11-17 08:25 | **non presidiata** | dichiarata dall'utente a inizio sessione. Stessi vincoli della riga precedente. Primo lavoro: diagnosi della replica verso CASA fallita il 16 e il 17 con NAS raggiungibile |
 
 
 ## ▶️ Da dove ripartire — aggiornato 2026-11-16

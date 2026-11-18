@@ -1673,3 +1673,42 @@ sessione non l'ha mai letto (un tentativo di leggerlo il 17 è stato negato, ed
 di HA. Poi `wuwentao/midea_ac_lan` scaricato da HACS alla **stessa** v2026.10.0:
 md5 dei 32 file identici a prima, quindi **nessun secondo riavvio**. I 3
 climatizzatori rispondono, 0 entità `unavailable`.
+
+## 2026-11-18 — Decisioni dell'utente e lavoro autonomo
+
+Sessione **non presidiata**. L'utente ha risposto alle domande aperte e ha
+chiesto di proseguire da solo sui punti autonomi, senza aspettarlo.
+
+**Decisioni dell'utente**: notifiche via **app di HA**; app da fuori via **443**;
+Cloudflare guidato; robot **Dreame L10 Pro**; blueprint del riscaldamento esteso
+ai Midea; ok alla 2FA sul PVE; "gestione condivisa" da riparlare.
+
+**443 aperta solo da CASA, non a tutti.** L'account owner `Luca` di HA **non ha
+la 2FA**. Aprire la 443 a internet con la sola password era esattamente la
+condizione esclusa in ROADMAP, ma senza 443 l'utente non può raggiungere HA per
+attivarla. Compromesso: DNAT `HA-HTTPS-da-internet` riattivato con
+`src_ip` = IP pubblico di CASA (preso dall'endpoint del tunnel), con
+`safe-change` armato. L'utente attiva la 2FA dalla rete di CASA, poi si toglie
+`src_ip`. Verificato: NGINX risponde 200 col nome DuckDNS, certificato valido fino
+al 5 gennaio 2027, accesso a router e AP intatto. Restano attivi `ip_ban` (5
+tentativi) e `trusted_proxies`. **Rischio residuo**: se l'IP di CASA cambia, la
+regola smette di funzionare (non si apre a sproposito).
+
+**Notifiche**: `avvisi-ha.sh` in `infra-common` e cron orario. Controlla
+`BACKUP-FALLITO`, replica, età dell'ultimo vzdump, disco e thin pool, VM e
+container `onboot` fermi, tunnel e ssh verso PGB-GW, eMMC. Avvisa solo quando un
+problema compare o sparisce; il battito arriva alle 08:05. Il destinatario è il
+Galaxy S24 (`mobile_app_sm_s921b`, il più recente fra i due telefoni
+registrati). **Limite accettato**: HA gira sul PVE, quindi se il PVE muore non
+parte nessun avviso, e l'unico segnale è il battito che manca. PATH esplicito
+e prova fatta con `env -i`, per la lezione della notte prima.
+
+**eMMC**: usura 0x01 (0-10%) per A e B, PRE_EOL 0x01. Aggiunta agli avvisi.
+
+**NTP IoT**: redirect `Dirotta-NTP-IoT` (udp/123 → 192.168.16.1), con
+`safe-change`. Nessun pacchetto in 2 minuti di osservazione: i dispositivi
+sincronizzano di rado. Il router serve NTP (`enable_server=1`).
+
+**ROADMAP disallineata**: `safe-change` installato, hostname, DNS obbligatorio,
+blocco DoT/DoH e `mmc-utils` risultavano aperti ma erano già fatti da agosto.
+Corretto. ⚠️ `safe-change arm` esce con codice ≠0 anche quando riesce.

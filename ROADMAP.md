@@ -21,7 +21,7 @@ restano qui con la data, così si vede cosa è già stato fatto e quando.
 > | 2026-11-17 08:25 | **non presidiata** | dichiarata dall'utente a inizio sessione. Stessi vincoli della riga precedente. Primo lavoro: diagnosi della replica verso CASA fallita il 16 e il 17 con NAS raggiungibile |
 
 
-## ▶️ Da dove ripartire — aggiornato 2026-11-18
+## ▶️ Da dove ripartire — aggiornato 2026-11-18 (sera)
 
 **Prima di tutto chiedere la modalità** (all'ultima chiusura: non presidiata).
 Poi controllare la replica (prima riga qui sotto). Elenco completo dei lavori
@@ -35,28 +35,28 @@ prima, come da regola 2.
 |---|---|---|
 | **Replica verso CASA** | corretto il 2026-11-18: la causa era il **PATH** dell'hook, non il NAS (vedi `decisions.md`) | collaudo la notte del 18-19: `REPLICA-CASA-FALLITA.txt` deve sparire. Se no, `journalctl -t vzdump-replica`. Copia fuori casa ferma al 15 nov fino ad allora |
 | **Dashboard nuova** (obiettivo dell'utente dal 15 nov) | nomi Midea fatti il 2026-11-17 | tradurre e nascondere le entità Midea che il modello non supporta (26 per split), poi progettare la dashboard per stanza. Le aree esistono già (9) |
-| **Salute della eMMC** (§9) | mai letta | serve `apt install mmc-utils` (pacchetto piccolo), poi solo lettura |
-| **`safe-change.sh` su PGB-GW** | scritto, mai installato | additivo, nessun effetto finché non lo si arma. **Prerequisito** di ogni modifica a rete e firewall qui sotto |
-| **Router: hostname `pgb-gw` / `pgb-ap`** (§1-ter #8) | da fare | non tocca la connettività |
+| ~~Salute della eMMC~~ ✅ 2026-11-18 | usura 0x01 (0-10%), PRE_EOL normale | ora controllata ogni ora da `avvisi-ha.sh` |
+| ~~`safe-change.sh` su PGB-GW~~ ✅ già dal 2026-08-16 | `/usr/bin/safe-change`, in `sysupgrade.conf` | ⚠️ `arm` esce con codice ≠0 anche quando riesce: niente `set -e` attorno |
+| ~~Router: hostname~~ ✅ già fatto | `pgb-gw` e `pgb-ap` verificati il 2026-11-18 | |
 | **Router: log persistenti** (§1-ter #7) | da fare | attenzione alle scritture sulla flash: log su file a rotazione piccola |
 | **AdGuard: liste e smart TV** (§3) | da fare | liste contenute (2 GB RAM, eMMC). Il DNAT delle TV verso AdGuard va col punto IoT qui sotto |
-| **IoT: DNS obbligatorio, blocco DoT/DoH, NTP locale** (§1-quater #2-4) | da fare, rischio basso | regole di firewall: **solo con `safe-change.sh` armato** |
+| ~~IoT: DNS obbligatorio, blocco DoT/DoH, NTP locale~~ ✅ | DNS e DoT/DoH già dal 16 ago; **NTP** aggiunto il 2026-11-18 (`Dirotta-NTP-IoT`) | |
 | **IoT: censire `.125`, lease statico al Dreame** (§1-quater #6) | da fare | rischio nullo. Il telefono fuori dalla VLAN IoT va chiesto all'utente |
-| **Notifiche**: lavoro preparatorio | progettato | gli script e i controlli dal PVE si possono scrivere prima; per attivarli serve il canale (sezione B) |
+| ~~Notifiche~~ ✅ 2026-11-18 via **app di HA** | `infra-common/scripts/avvisi-ha.sh`, cron `/etc/cron.d/avvisi-ha`: ogni ora sui cambiamenti, battito alle 08:05, al Galaxy S24 (`mobile_app_sm_s921b`) | ⚠️ se muore il PVE muore anche il canale: il segnale è il **battito mancato** |
 
 ### B. Li faccio io, ma prima serve una tua decisione o un tuo dato
 
 | Lavoro | Cosa serve da te |
 |---|---|
-| **Notifiche** (battito giornaliero, PVE non risponde, backup, replica, disco) | il canale: **ntfy o Telegram**. La posta del PVE non arriva |
-| **App di Home Assistant da fuori casa** | la scelta: riaprire la **443** con le mitigazioni (2FA, `trusted_proxies`, `ip_ban`) oppure la **VPN `wg0`**, che è coerente col principio del §1-quater (accesso remoto via WireGuard, non via cloud), ma richiede l'inoltro UDP 51820 sul modem dell'operatore, a cui oggi non ho accesso |
-| **`*.pgb.diamanti.cloud`** su Cloudflare | creare i record (A `pgb`, CNAME `ha.pgb`, nuvola grigia) e il token DDNS, da mettere in `/root/.creds-pgb` come `CF_PGB_DDNS_TOKEN`. Il passaggio del certificato resta da sessione presidiata |
-| **Robot aspirapolvere** (d'inverno una volta a settimana, d'estate come oggi) | modello e app del robot, più l'export di CASA in `infra-common/ha/da-casa/` (prompt `infra-common/prompt-export-ha-casa.md`) |
-| **Blueprint riscaldamento esteso ai Midea** | l'export di CASA, come sopra. Il termostato resta spento per tua scelta: l'antigelo si **propone**, non si attiva |
+| ~~Notifiche~~ | **scelto: app di HA** (2026-11-18). Fatto, vedi sezione A |
+| **App di HA da fuori casa** | **scelto: 443** (2026-11-18). DNAT riattivato **solo da IP pubblico di CASA** (`src_ip`), perché l'account owner `Luca` non ha la 2FA. Da fare dall'utente: attivare la 2FA (TOTP) nel profilo di HA dalla rete di CASA. Poi togliere `src_ip` per aprirla ovunque |
+| **`*.pgb.diamanti.cloud`** su Cloudflare | l'utente vuole essere **guidato**: record A `pgb` e CNAME `ha.pgb` (nuvola grigia), token API con permesso solo `Zone.DNS:Edit` sulla zona, in `/root/.creds-pgb` come `CF_PGB_DDNS_TOKEN`. Certificato in sessione presidiata |
+| **Robot aspirapolvere**: **Dreame L10 Pro** | serve sapere se è su **Mi Home (Xiaomi)** o **Dreame Home**, e le credenziali di quell'account in HA (integrazione `dreame-vacuum` da HACS, cloud per la mappa). Più l'export di CASA |
+| **Blueprint riscaldamento esteso ai Midea** | **confermato dall'utente**. Fermo sull'export di CASA: `infra-common/ha/da-casa/` contiene solo il LEGGIMI al 2026-11-18 |
 | **CASA → Home Assistant di PGB** (regola nominata `s2sVPN → 192.168.15.4`, §1-ter) | ok alla proposta; serve all'aggancio delle due domotiche (§8) |
-| **2FA TOTP sulla GUI del PVE** (§10 #2) | inquadrare il QR con la tua app di autenticazione |
+| **2FA TOTP sulla GUI del PVE** | **ok dell'utente** (2026-11-18). Serve lui presente a inquadrare il QR: attivarla senza di lui lo chiuderebbe fuori dalla GUI |
 | **Marker `DOCUMENTI-NON-SALVATI.txt`** in collect-configs, **rimozione del cron `iot-profile`** | ok, sono proposte già scritte |
-| **"Gestione condivisa"** (§7) | chiarire: altre persone che intervengono, o configurazione uniforme fra i nodi? |
+| **"Gestione condivisa"** (§7) | l'utente non ricorda: **riparlarne** |
 | **Cosa rallenta il NAS di CASA alle 02:00** | da guardare in una sessione su CASA (qui solo lettura) |
 
 ### C. Solo in sessione presidiata (qualcuno a PGB)

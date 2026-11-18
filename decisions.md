@@ -1579,6 +1579,9 @@ Se si costruisce un antigelo in HA, va proposto, non attivato da sé.
 
 ## 2026-11-17 — Replica verso CASA: il controllo dello storage ritenta
 
+> ⚠️ **Diagnosi sbagliata, corretta il 2026-11-18** (voce successiva): la causa
+> non era il NAS lento ma il PATH dell'hook. Questa voce resta per la storia.
+
 Sessione **non presidiata** (dichiarata alle 08:25). Solo PVE, nessuna modifica alla rete.
 
 **Sintomo**: `REPLICA-CASA-FALLITA.txt` il 16 e il 17 alle 02:36, motivo "storage
@@ -1630,3 +1633,43 @@ invalid_token`). Il token GitHub di HACS non vale più. Non ha effetto sui Midea
 **finché non si riautorizza HACS non arrivano aggiornamenti per nessuna
 integrazione custom**. La riautorizzazione richiede l'utente su GitHub (device
 code), non la presenza fisica. Niente riavvio di HA fatto, perché non serviva.
+
+## 2026-11-18 — Replica verso CASA: la causa vera era il PATH, non il NAS
+
+Sessione **non presidiata** (dichiarata il 17). Correzione di una diagnosi mia.
+
+**Cosa è successo**: con la modifica del 17 l'errore di `pvesm` è finito nel
+journal invece che in `/dev/null`, e la notte del 18 ha detto la verità:
+`timeout: failed to run command 'pvesm': No such file or directory`.
+
+**Causa**: `pvescheduler` gira dal 16 agosto **senza la variabile PATH**. Bash se
+ne fa una sua con `/usr/sbin`, ma non la esporta: `pvesm` lanciato da bash va,
+`timeout pvesm` no (cerca solo in `/bin:/usr/bin`). Il `timeout` davanti a
+`pvesm status` l'ho messo io il 15 novembre: da lì il controllo falliva sempre,
+all'istante. Il NAS lento del 17 era un'ipotesi sbagliata, e il marker che ho
+scritto ne dava la diagnosi falsa come fatto.
+
+**Secondo guasto, nascosto da agosto**: `timeout 300 pvesm prune-backups` ha lo
+stesso problema dal primo giorno. **60 job** con `failed to run command`, mentre il
+journal scriveva "ritenzione remota applicata": l'`if` guardava l'esito di `sed`
+in fondo alla pipeline. La ritenzione remota è stata applicata solo dalle
+repliche lanciate a mano (es. 15 novembre). Nessun danno: ~790 GB liberi.
+
+**Rimedio** in `pve-replica-remota.sh`: `export PATH` completo in testa, esito
+del prune da `PIPESTATUS[0]`, marker neutro ("l'errore di pvesm è nel journal").
+Provato con `env -i` (ambiente senza PATH, come pvescheduler): guasto riprodotto
+prima, blocco e `prune-backups --dry-run` riusciti dopo; controprova su comando
+che non parte → 127. Il collaudo vero è la notte del 18-19.
+
+**Lezione**: un hook non è una shell. Si prova con `env -i`, non da terminale.
+
+## 2026-11-18 — HACS riautorizzato, fork Midea registrato
+
+L'utente ha autorizzato HACS su GitHub con il device code, avviato da qui sul
+flusso `reauth` che HA aveva già aperto. Il token nuovo l'ha salvato HACS: questa
+sessione non l'ha mai letto (un tentativo di leggerlo il 17 è stato negato, ed
+è giusto così). HACS non si ricaricava da solo (`failed_unload`): backup
+`pre-hacs-reauth-2026-11-18` (slug `ff025924`), `ha core check` ok, un riavvio
+di HA. Poi `wuwentao/midea_ac_lan` scaricato da HACS alla **stessa** v2026.10.0:
+md5 dei 32 file identici a prima, quindi **nessun secondo riavvio**. I 3
+climatizzatori rispondono, 0 entità `unavailable`.

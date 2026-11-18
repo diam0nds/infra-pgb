@@ -21,25 +21,66 @@ restano qui con la data, così si vede cosa è già stato fatto e quando.
 > | 2026-11-17 08:25 | **non presidiata** | dichiarata dall'utente a inizio sessione. Stessi vincoli della riga precedente. Primo lavoro: diagnosi della replica verso CASA fallita il 16 e il 17 con NAS raggiungibile |
 
 
-## ▶️ Da dove ripartire — aggiornato 2026-11-17
+## ▶️ Da dove ripartire — aggiornato 2026-11-18
 
-Stato alla chiusura della sessione del 15-16 novembre: repo puliti e pushati,
-backup e replica verso CASA di nuovo regolari, tunnel su con watchdog. **Prima
-di tutto chiedere la modalità** (all'ultima chiusura: non presidiata).
+**Prima di tutto chiedere la modalità** (all'ultima chiusura: non presidiata).
+Poi controllare la replica (prima riga qui sotto). Elenco completo dei lavori
+aperti, anche quelli in coda da agosto più in basso, divisi per **chi deve
+muoversi**. Ogni modifica agli apparati resta comunque proposta e approvata
+prima, come da regola 2.
 
-| Lavoro | Stato | Cosa serve per andare avanti |
+### A. Posso farli in autonomia, anche in sessione non presidiata
+
+| Lavoro | Stato | Nota |
 |---|---|---|
-| **Notifiche** (oltre a backup falliti e VPN giù) | progettato, non iniziato | scelta del canale da parte dell'utente: ntfy o Telegram. Poi, lavoro additivo e sicuro anche non presidiato: battito giornaliero dal router, avviso dal router se il PVE non risponde, controlli dal PVE (vzdump, replica, `BACKUP-FALLITO`, disco, guest). La posta del PVE **non** arriva, vedi sotto |
-| **App HA fuori casa** | causa nota: DNAT `HA-HTTPS-da-internet` disabilitato, `wg0` mai usato | decisione dell'utente: riaprire la 443 (dopo verifica 2FA, `trusted_proxies`, `ip_ban`, c'è già un `configuration.yaml.prima-ipban`) oppure VPN `wg0` (serve UDP 51820 inoltrato sul modem) |
-| **`*.pgb.diamanti.cloud`** su Cloudflare | piano pronto | l'utente crea i record (A `pgb`, CNAME `ha.pgb`, nuvola grigia) e due token; quello DDNS va in `/root/.creds-pgb` come `CF_PGB_DDNS_TOKEN`. Il passaggio del certificato richiede sessione presidiata |
-| **Robot aspirapolvere e blueprint riscaldamento** (anche sui Midea) | in attesa | export di CASA in `infra-common/ha/da-casa/` (prompt `infra-common/prompt-export-ha-casa.md`) e modello/app del robot dall'utente |
-| **Replica verso CASA**: falsi guasti il 16 e 17 nov | corretto il 2026-11-17 (5 tentativi, PVE dà 2 s al df del NAS) | controllare che `REPLICA-CASA-FALLITA.txt` sparisca dopo la notte del 17-18; se no, `journalctl -t vzdump-replica`. Aperto: cosa rallenta il NAS di CASA alle 02:00 |
-| **Midea**: nomi leggibili ✅ 2026-11-17 (`climate.<area>_climatizzatore`); fork wuwentao da registrare in HACS | nomi fatti; HACS **disattivato**: token GitHub non valido (`Bad credentials`) | l'utente riautorizza HACS su GitHub (device code, si fa anche da remoto). Poi scaricare da HACS la **stessa** v2026.10.0 e riavviare HA |
-| **Termostato** | spento per decisione dell'utente (2026-11-15) | **non riaccendere né attivare antigelo d'iniziativa**: solo proporre |
-| **Zigbee**: presa TS0121, SNZB-02, SNZB-03 | diagnosticati, non rispondono via radio | sessione presidiata: ricollegare/riassociare, batterie |
-| Aggiornamenti major (Z2M 2.x, HAOS, DuckDNS 2.0, Mosquitto 7, NGINX) | rimandati | sessione presidiata |
-| Marker `DOCUMENTI-NON-SALVATI.txt` in collect-configs, rimozione del cron `iot-profile` | proposti, non approvati | ok dell'utente |
-| BIOS `Restore on AC Power Loss` | azione dell'utente | tastiera USB sul posto |
+| **Replica verso CASA** | corretto il 2026-11-18: la causa era il **PATH** dell'hook, non il NAS (vedi `decisions.md`) | collaudo la notte del 18-19: `REPLICA-CASA-FALLITA.txt` deve sparire. Se no, `journalctl -t vzdump-replica`. Copia fuori casa ferma al 15 nov fino ad allora |
+| **Dashboard nuova** (obiettivo dell'utente dal 15 nov) | nomi Midea fatti il 2026-11-17 | tradurre e nascondere le entità Midea che il modello non supporta (26 per split), poi progettare la dashboard per stanza. Le aree esistono già (9) |
+| **Salute della eMMC** (§9) | mai letta | serve `apt install mmc-utils` (pacchetto piccolo), poi solo lettura |
+| **`safe-change.sh` su PGB-GW** | scritto, mai installato | additivo, nessun effetto finché non lo si arma. **Prerequisito** di ogni modifica a rete e firewall qui sotto |
+| **Router: hostname `pgb-gw` / `pgb-ap`** (§1-ter #8) | da fare | non tocca la connettività |
+| **Router: log persistenti** (§1-ter #7) | da fare | attenzione alle scritture sulla flash: log su file a rotazione piccola |
+| **AdGuard: liste e smart TV** (§3) | da fare | liste contenute (2 GB RAM, eMMC). Il DNAT delle TV verso AdGuard va col punto IoT qui sotto |
+| **IoT: DNS obbligatorio, blocco DoT/DoH, NTP locale** (§1-quater #2-4) | da fare, rischio basso | regole di firewall: **solo con `safe-change.sh` armato** |
+| **IoT: censire `.125`, lease statico al Dreame** (§1-quater #6) | da fare | rischio nullo. Il telefono fuori dalla VLAN IoT va chiesto all'utente |
+| **Notifiche**: lavoro preparatorio | progettato | gli script e i controlli dal PVE si possono scrivere prima; per attivarli serve il canale (sezione B) |
+
+### B. Li faccio io, ma prima serve una tua decisione o un tuo dato
+
+| Lavoro | Cosa serve da te |
+|---|---|
+| **Notifiche** (battito giornaliero, PVE non risponde, backup, replica, disco) | il canale: **ntfy o Telegram**. La posta del PVE non arriva |
+| **App di Home Assistant da fuori casa** | la scelta: riaprire la **443** con le mitigazioni (2FA, `trusted_proxies`, `ip_ban`) oppure la **VPN `wg0`**, che è coerente col principio del §1-quater (accesso remoto via WireGuard, non via cloud), ma richiede l'inoltro UDP 51820 sul modem dell'operatore, a cui oggi non ho accesso |
+| **`*.pgb.diamanti.cloud`** su Cloudflare | creare i record (A `pgb`, CNAME `ha.pgb`, nuvola grigia) e il token DDNS, da mettere in `/root/.creds-pgb` come `CF_PGB_DDNS_TOKEN`. Il passaggio del certificato resta da sessione presidiata |
+| **Robot aspirapolvere** (d'inverno una volta a settimana, d'estate come oggi) | modello e app del robot, più l'export di CASA in `infra-common/ha/da-casa/` (prompt `infra-common/prompt-export-ha-casa.md`) |
+| **Blueprint riscaldamento esteso ai Midea** | l'export di CASA, come sopra. Il termostato resta spento per tua scelta: l'antigelo si **propone**, non si attiva |
+| **CASA → Home Assistant di PGB** (regola nominata `s2sVPN → 192.168.15.4`, §1-ter) | ok alla proposta; serve all'aggancio delle due domotiche (§8) |
+| **2FA TOTP sulla GUI del PVE** (§10 #2) | inquadrare il QR con la tua app di autenticazione |
+| **Marker `DOCUMENTI-NON-SALVATI.txt`** in collect-configs, **rimozione del cron `iot-profile`** | ok, sono proposte già scritte |
+| **"Gestione condivisa"** (§7) | chiarire: altre persone che intervengono, o configurazione uniforme fra i nodi? |
+| **Cosa rallenta il NAS di CASA alle 02:00** | da guardare in una sessione su CASA (qui solo lettura) |
+
+### C. Solo in sessione presidiata (qualcuno a PGB)
+
+| Lavoro | Perché serve la presenza |
+|---|---|
+| **Zigbee**: presa TS0121, SNZB-02, SNZB-03 | riassociare e cambiare le batterie |
+| **Aggiornamenti major**: Zigbee2MQTT 2.x, HAOS, DuckDNS 2.0, Mosquitto, NGINX | possono non ripartire |
+| **Certificato su `pgb.diamanti.cloud`** | tocca l'accesso a HA |
+| **SSH del PVE senza password, 8006 solo in LAN, firewall del PVE** (§10 #3-4) | se sbagliati chiudono fuori da un sito vuoto |
+| **Router: password off su dropbear, `flow_offloading`** (§1-ter #5-6) | toccano accesso e instradamento |
+| **IoT in default-deny, `isolate`, VLAN sul cavo, WPA3, 802.11v** (§1-quater #5 e #7, §2-bis, §2) | possono staccare dispositivi dalla rete |
+| **Relè del quadro di funzione ignota** (`switch.ingresso_rele_quadro_da_identificare`) | si identifica guardando il quadro |
+| **BIOS `Restore on AC Power Loss`** | tastiera USB sul posto |
+
+**Termostato**: spento per decisione dell'utente (2026-11-15). Non riaccenderlo e
+non attivare un antigelo d'iniziativa: proporlo.
+
+### Chiuso in questa sessione (17-18 novembre)
+
+- Midea: nomi leggibili, 78 entità `<area>_climatizzatore`, dashboard aggiornata
+- HACS riautorizzato su GitHub dall'utente, fork `wuwentao/midea_ac_lan` v2026.10.0
+  registrato in HACS (file identici, nessun secondo riavvio)
+- Replica: trovata la causa vera (PATH) e il prune remoto mai eseguito da agosto
 
 ---
 

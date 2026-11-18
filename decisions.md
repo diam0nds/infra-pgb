@@ -1712,3 +1712,27 @@ sincronizzano di rado. Il router serve NTP (`enable_server=1`).
 **ROADMAP disallineata**: `safe-change` installato, hostname, DNS obbligatorio,
 blocco DoT/DoH e `mmc-utils` risultavano aperti ma erano già fatti da agosto.
 Corretto. ⚠️ `safe-change arm` esce con codice ≠0 anche quando riesce.
+
+## 2026-11-18 (sera) — `ha.pgb.diamanti.cloud` su Cloudflare, sessione non presidiata
+
+**Come CASA** (letto in sola lettura su infra-casa): un solo record pubblico per
+sito (`ha.casa` / `ha.pgb`, DNS only), nessun wildcard pubblico, token dedicato
+per ogni scopo. Sui token di CASA l'utente non ricordava di averli creati: sono
+due, 23-24/10, uno in NPM e uno in os-ddclient.
+
+**Fatto**:
+- l'utente ha creato un **account token** (consiglio di Cloudflare: è legato
+  all'account, non alla persona, adatto a una macchina) `pgb-ddns-router`,
+  permessi DNS Write + Zone Read, solo `diamanti.cloud`. Inserito da lui in un
+  prompt nascosto, mai passato dalla chat. Sta in `/root/.creds-pgb`;
+- record A `ha.pgb` creato via API con un IP segnaposto (192.0.2.1), per provare
+  il percorso di aggiornamento;
+- sul router master: `ddns-scripts-cloudflare` e `curl` (lo script v4 richiede
+  curl; overlay dal 10% al 16%), sezione `ddns.cloudflare_pgb` con le stesse
+  scelte di DuckDNS (ipify in HTTPS, `dns_server` 1.1.1.1, 5 min / 24 h).
+  Primo giro: `Update successful`; 1.1.1.1 e 8.8.8.8 rispondono con l'IP
+  pubblico di PGB. Il token finisce in `etc/config/ddns`, che è cifrato.
+
+**DuckDNS resta attivo**: l'app e il certificato (fino al 2027-01-05) usano
+ancora quel nome. Il cambio di nome e il certificato si fanno in sessione
+presidiata.

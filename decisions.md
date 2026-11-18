@@ -1725,7 +1725,7 @@ due, 23-24/10, uno in NPM e uno in os-ddclient.
   all'account, non alla persona, adatto a una macchina) `pgb-ddns-router`,
   permessi DNS Write + Zone Read, solo `diamanti.cloud`. Inserito da lui in un
   prompt nascosto, mai passato dalla chat. Sta in `/root/.creds-pgb`;
-- record A `ha.pgb` creato via API con un IP segnaposto (192.0.2.1), per provare
+- record A `ha.pgb` creato via API con un IP segnaposto (192.0.2.1), per provare <!-- no-secrets-ok: 192.0.2.1 e' TEST-NET-1 (RFC 5737), segnaposto, non un IP reale -->
   il percorso di aggiornamento;
 - sul router master: `ddns-scripts-cloudflare` e `curl` (lo script v4 richiede
   curl; overlay dal 10% al 16%), sezione `ddns.cloudflare_pgb` con le stesse

@@ -215,7 +215,7 @@ UDP 51820 sul router del provider **esiste e funziona**.
 | ID | Nome | Tipo | RAM | Disco | onboot |
 |---|---|---|---|---|---|
 | 100 | `haos` | VM (Home Assistant OS) | 4 GB | 32 GB | ✅ |
-| 101 | `adguard` | LXC | 2 GB | 2 GB | ✅ |
+| 101 | `adguard` | LXC | 512 MB (+512 swap, verificato 2026-11-20) | 2 GB | ✅ |
 
 ### Toolchain presente
 

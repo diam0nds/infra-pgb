@@ -33,13 +33,13 @@ prima, come da regola 2.
 
 | Lavoro | Stato | Nota |
 |---|---|---|
-| **Replica verso CASA** | corretto il 2026-11-18: la causa era il **PATH** dell'hook, non il NAS (vedi `decisions.md`) | collaudo la notte del 18-19: `REPLICA-CASA-FALLITA.txt` deve sparire. Se no, `journalctl -t vzdump-replica`. Copia fuori casa ferma al 15 nov fino ad allora |
-| **Dashboard nuova** (obiettivo dell'utente dal 15 nov) | nomi Midea fatti il 2026-11-17 | tradurre e nascondere le entità Midea che il modello non supporta (26 per split), poi progettare la dashboard per stanza. Le aree esistono già (9) |
+| ~~Replica verso CASA~~ ✅ | PATH corretto il 2026-11-18. 19/11 fallita per **timeout** (rsync oltre 1 h), 20/11 riuscita in 3532 s. Limite portato a **2 h** il 2026-11-20 (ok utente) | se torna a sfiorare il limite: capire perché il set notturno è passato da ~15 a ~59 min |
+| **Dashboard nuova** | 2026-11-20: entità Midea tradotte (12 visibili per split) e 14 nascoste per split (doppioni del termostato o funzioni assenti sul modello `00000Q12`: umidità, aria fresca, breezeless…; **nascoste, non disattivate**). Creata la dashboard **«Per stanza»** (`/pgb-stanze`, vista a sezioni, 8 stanze); la Overview non è stata toccata | non verificata a vista: la deve guardare l'utente e dire se diventa la predefinita |
 | ~~Salute della eMMC~~ ✅ 2026-11-18 | usura 0x01 (0-10%), PRE_EOL normale | ora controllata ogni ora da `avvisi-ha.sh` |
 | ~~`safe-change.sh` su PGB-GW~~ ✅ già dal 2026-08-16 | `/usr/bin/safe-change`, in `sysupgrade.conf` | ⚠️ `arm` esce con codice ≠0 anche quando riesce: niente `set -e` attorno |
 | ~~Router: hostname~~ ✅ già fatto | `pgb-gw` e `pgb-ap` verificati il 2026-11-18 | |
-| **Router: log persistenti** (§1-ter #7) | da fare | attenzione alle scritture sulla flash: log su file a rotazione piccola |
-| **AdGuard: liste e smart TV** (§3) | da fare | liste contenute (2 GB RAM, eMMC). Il DNAT delle TV verso AdGuard va col punto IoT qui sotto |
+| ~~Router: log persistenti~~ ✅ 2026-11-20 | entrambi i router mandano il syslog al PVE (`log_ip`), **rsyslog solo collettore** (nessun input locale) in `/var/log/router/pgb-gw.log` e `pgb-ap.log`, scritture ogni 60 s, rotazione settimanale ×12. `cronloglevel=9`: niente più riga per ogni esecuzione di cron | se il PVE è spento il router tiene i log in RAM come prima |
+| **AdGuard: liste e smart TV** (§3) | liste già adeguate (AdGuard DNS, Smart-TV, Xiaomi) e bonifica TV fatta il 16 ago. 2026-11-20: `openwrt.org` (sonda del dns-watchdog, **51%** del log) escluso da log e statistiche. Container: **512 MB**, non 2 GB | proposte: log da 90 a 30 giorni (oggi 390 MB su eMMC); vedere i client veri (oggi tutto arriva da `192.168.15.1`), serve per trovare chi manda log a Datadog (~95/giorno) |
 | ~~IoT: DNS obbligatorio, blocco DoT/DoH, NTP locale~~ ✅ | DNS e DoT/DoH già dal 16 ago; **NTP** aggiunto il 2026-11-18 (`Dirotta-NTP-IoT`) | |
 | **IoT: censire `.125`, lease statico al Dreame** (§1-quater #6) | da fare | rischio nullo. Il telefono fuori dalla VLAN IoT va chiesto all'utente |
 | ~~Notifiche~~ ✅ 2026-11-18 via **app di HA** | `infra-common/scripts/avvisi-ha.sh`, cron `/etc/cron.d/avvisi-ha`: ogni ora sui cambiamenti, battito alle 08:05, al Galaxy S24 (`mobile_app_sm_s921b`) | ⚠️ se muore il PVE muore anche il canale: il segnale è il **battito mancato** |

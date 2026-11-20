@@ -1736,3 +1736,34 @@ due, 23-24/10, uno in NPM e uno in os-ddclient.
 **DuckDNS resta attivo**: l'app e il certificato (fino al 2027-01-05) usano
 ancora quel nome. Il cambio di nome e il certificato si fanno in sessione
 presidiata.
+
+## 2026-11-20 — Lavori autonomi: replica a 2 h, AdGuard, log dei router, dashboard
+
+**Sessione non presidiata** (dichiarata il 2026-11-17, l'utente non è a PGB).
+Ok dell'utente: «alza a 2 ore e vai avanti con le attività in cui sei autonomo».
+
+- **Replica**: il 19/11 l'rsync ha sforato l'ora (dopo la correzione del PATH,
+  quindi la causa è un'altra), il 20/11 è riuscito in 3532 s. `TIMEOUT` da 3600
+  a 7200 s. Il perché del passaggio da ~15 a ~59 min resta da capire.
+- **AdGuard**: nel log (42 giorni, 231.000 query) il 51% è `openwrt.org`, la
+  sonda del `dns-watchdog` del router ogni minuto. Escluso da querylog e
+  statistiche (`ignored`, `ignored_enabled: true`), backup della config in
+  `AdGuardHome.yaml.pre-2026-11-20` nel container. Fermo/ripartenza di 3 s,
+  sotto la soglia del watchdog (2 fallimenti). Tutti i blocchi frequenti sono
+  telemetria (Office, `dit.whatsapp.net`, Amazon `minerva`, LG): nessun falso
+  positivo. **Limite scoperto**: AdGuard vede un solo client, il router, per cui
+  non si può dire chi interroga `http-intake.logs.us5.datadoghq.com`.
+- **Log dei router**: `log_ip` verso il PVE. Su PVE `rsyslog` installato **solo
+  come collettore**: config scritta prima dell'installazione (`force-confold`),
+  nessun `imuxsock`/`imklog` e nessun include di `rsyslog.d`, così i log del PVE
+  non vengono scritti una seconda volta. Scritture a blocchi ogni 60 s.
+  `cronloglevel=9` su entrambi: il 67% delle righe del master era «cron ha
+  lanciato X». I due file nuovi entrano in `collect-configs.sh`.
+- **Midea**: 14 entità per split nascoste (non disattivate: si rimettono dalla
+  pagina dell'entità) e 11 tradotte. Il rollback è `name=None, hidden_by=None`
+  su tutte le entità `midea_ac_lan`.
+- **Dashboard «Per stanza»** (`/pgb-stanze`) nuova, accanto alla Overview, che
+  resta com'era.
+
+**Trovato e non toccato**: `light.cucina_faretti` è **accesa dal 15/11 11:57**,
+25 W continui in una casa vuota. Da chiedere all'utente prima di spegnerla.

@@ -1765,5 +1765,5 @@ Ok dell'utente: «alza a 2 ore e vai avanti con le attività in cui sei autonomo
 - **Dashboard «Per stanza»** (`/pgb-stanze`) nuova, accanto alla Overview, che
   resta com'era.
 
-**Trovato e non toccato**: `light.cucina_faretti` è **accesa dal 15/11 11:57**,
-25 W continui in una casa vuota. Da chiedere all'utente prima di spegnerla.
+**Trovato**: `light.cucina_faretti` era **accesa dal 15/11 11:57**,
+25 W continui in una casa vuota. Spenta il 2026-11-20 su ok dell'utente (0 W verificati).
